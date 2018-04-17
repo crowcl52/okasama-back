@@ -21,20 +21,29 @@ function prueba(req,res){
 
 function states(req,res){
     var id = req.params.id;
-    con.connect(function(err) {
+    
+    con.query("SELECT * FROM okasama.state;", function (err, result, fields) {
         if (err) throw err;
-        con.query("SELECT * FROM okasama.state;", function (err, result, fields) {
-            if (err) throw err;
-            res.status(200).send({result:result});
-            });
+        res.status(200).send({result});
+    });
+        
+};
+
+function getProduct(req,res){
+    var id = req.params.id;
+    var query = `SELECT * FROM okasama.product where id_product = ${id} `;        
+    con.query(query, function (err, result, fields) {
+        if (err) throw err;
+        res.status(200).send({result:result});
         });
+        
 };
 
 function products(req,res){
     
       con.query("SELECT * FROM okasama.product;", function (err, result, fields) {
         if (err) throw err;
-        res.status(200).send({data:result});
+        res.status(200).send({result});
       });
 }
 
@@ -59,35 +68,44 @@ function Newproduct(req,res){
 
     var params = req.body;
     console.log(params)
-    res.status(200).send({data:params})
 
-    // con.query("SELECT * FROM okasama.product;", function (err, result, fields) {
-    //     if (err) throw err;
-    //     res.status(200).send({result:result});
-    // });
+    var params = req.body;
+    var time = new Date();
+    var date = time.getFullYear()+"-"+(time.getMonth()+1)+"-"+(time.getDate());
+    var sql =  `INSERT INTO okasama.product (name, description, image, min_price, max_price, discount, type, date_creation, date_update) VALUES 
+                ('${params.name}','${params.description}','${params.image}','${params.min_price}','${params.max_price}','${params.discount}','${params.type}','${date}','${date}')` ;
+    con.query(sql, function (err, result, fields) {
+        if (err) res.status(400).send({"data":"error"});
+        res.status(200).send({"data":"success"});
+    });
 }
 
 function newUser(req,res){
 
     var params = req.body;
-    console.log(params.email);
+    console.log(params);
     var exist = [];
-    con.query("SELECT * FROM okasama.employe where email = '"+params.email+"'", function (err, result, fields) {
-        if (err) throw err;
-        exist = result;
-        if(exist.length > 0){
-            res.status(400).send({user:false});
-        }else{
-            var time = new Date();
-            var date = time.getFullYear()+"-"+(time.getMonth()+1)+"-"+(time.getDate());
-            var sql =  `INSERT INTO okasama.employe (name, phone, email, address, passwors, type, date_creation, date_update, id_state) VALUES 
-                        ('${params.name}', '${params.phone}', '${params.email}', '${params.address}', '${params.password}', '${params.type}', '${date}', '${date}','${params.id_state}') `;
-            con.query(sql, function (err, result, fields) {
+    if(params.email != ""){
+        con.query("SELECT * FROM okasama.employe where email = '"+params.email+"'", function (err, result, fields) {
             if (err) throw err;
-            res.status(200).send({data:result});
-            });
-        }
-    });
+            exist = result;
+            if(exist.length > 0){
+                res.status(400).send({user:false});
+            }else{
+                var time = new Date();
+                var date = time.getFullYear()+"-"+(time.getMonth()+1)+"-"+(time.getDate());
+                var sql =  `INSERT INTO okasama.employe (name, phone, email, address, passwors, type, date_creation, date_update, id_state) VALUES 
+                            ('${params.name}', '${params.phone}', '${params.email}', '${params.address}', '${params.password}', '${params.type}', '${date}', '${date}','${params.id_state}') `;
+                con.query(sql, function (err, result, fields) {
+                if (err) throw err;
+                res.status(200).send({data:"user created"});
+                });
+            }
+        });
+    }else{
+        res.status(400).send({user:false});
+    }
+    
 
     
 }
@@ -139,12 +157,12 @@ function listOrders(req,res){
     console.log(id);
 
     if(type == 'admin'){
-        con.query("SELECT * FROM okasama.order where recive = 0", function (err, result, fields) {
+        con.query("SELECT * FROM okasama.order o join okasama.product p on o.id_product = p.id_product where o.recive = 0", function (err, result, fields) {
             if (err) throw err;
             res.status(200).send({data:result});
           });
     }else if(type == 'user' && id != undefined ){
-        con.query("SELECT * FROM okasama.order where id_employe = "+id, function (err, result, fields) {
+        con.query("SELECT * FROM okasama.order o join okasama.product p on o.id_product = p.id_product where o.id_employe = "+id, function (err, result, fields) {
             if (err) throw err;
             res.status(200).send({data:result});
           });
@@ -154,15 +172,37 @@ function listOrders(req,res){
     
 }
 
+function search(req,res){
+    var params = req.body;
+    console.log(params.data);
+    var query = `SELECT * FROM okasama.product where name LIKE '%${params.data}%';	`;
+    con.query(query, function (err, result, fields) {
+        if (err) throw err;
+        res.status(200).send({result:result});
+        });
+}
+
+function category(req,res){
+    var params = req.body;
+    console.log(params.data);
+    var query = `SELECT * FROM okasama.product where type=${params.data};	`;
+    con.query(query, function (err, result, fields) {
+        if (err) throw err;
+        res.status(200).send({result:result});
+        });
+}
 
 module.exports = {
     prueba,
     states,
+    getProduct,
     products,
     editProduct,
     Newproduct,
     newUser,
     login,
     newOrder,
-    listOrders
+    listOrders,
+    search,
+    category
 }
